@@ -20,7 +20,7 @@
         "symfony/yaml": "^3.2|^4.3",
         "nesbot/carbon": "^2.0",
         "illuminate/collections": "8.29.0",
-        "guzzlehttp/psr7": "1.7.0",
+        "guzzlehttp/psr7": "1.8.1",
         "psr/cache": "^1.0",
         "league/flysystem-memory": "^1.0",
         "cache/filesystem-adapter": "^1.0",
