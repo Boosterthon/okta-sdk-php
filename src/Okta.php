@@ -1,4 +1,5 @@
 <?php
+
 /******************************************************************************
  * Copyright 2017 Okta, Inc.                                                  *
  *                                                                            *
@@ -30,6 +31,8 @@ class Okta
 
     const VERSION = '1.3.0';
 
+    private $responseHeaders;
+
     public function __construct(Client $client = null, DefaultDataStore $dataStore = null)
     {
         $this->client = $client ?: Client::getInstance();
@@ -38,12 +41,57 @@ class Okta
 
     public function getUsers(array $options = [])
     {
-        return $this->dataStore->getCollection(
+        $result = $this->dataStore->getCollection(
             '/api/v1/users',
             User::class,
             UserCollection::class,
             $options
         );
+        $this->responseHeaders = $this->dataStore->responseHeaders;
+        return $result;
+    }
+
+
+    /**
+     * returns true if previous call has a next page
+     *
+     * @return array
+     */
+    private function getNextOptions(): array
+    {
+        $ret = [];
+        // return if a prior user page has not been accessed
+        if (!$this->responseHeaders && $this->responseHeaders['link']) {
+            return $ret;
+        }
+
+        // return false if there is no next on previous call response headers
+        foreach ($this->responseHeaders['link'] as $link) {
+            if (preg_match('/rel=\"next\"/', $link)) {
+                if (preg_match('/after=(.*)&/', $link, $match)) {
+                    $ret['after'] = $match[1];
+                }
+                if (preg_match('/limit=(.*)>/', $link, $match)) {
+                    $ret['limit'] = $match[1];
+                }
+            }
+        }
+        return $ret;
+    }
+
+    /**
+     * returns the result of the next users page
+     * if no next page return empty collection
+     *
+     * @return UserCollection
+     */
+    public function getNextUsers(): UserCollection
+    {
+        $nextOptions = $this->getNextOptions();
+        if (empty($nextOptions)) {
+            return new UserCollection();
+        }
+        return $this->getUsers(['query' => $nextOptions]);
     }
 
     public function getGroups(array $options = [])
