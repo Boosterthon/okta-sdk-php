@@ -182,7 +182,7 @@ class DefaultDataStoreTest extends TestCase
 
 
     /** @test */
-    public function getting_a_resource_will_pull_from_cache_the_second_time_its_requested()
+    public function getting_a_resource_will_not_pull_from_cache_the_second_time_its_requested()
     {
         $mockReturns = [
             [
@@ -206,7 +206,10 @@ class DefaultDataStoreTest extends TestCase
         }
 
 
+
         $client = (new \Okta\ClientBuilder())
+            ->setOrganizationUrl('https://example.com')
+            ->setToken('123')
             ->setHttpClient($httpClient)
             ->build();
 
@@ -229,12 +232,12 @@ class DefaultDataStoreTest extends TestCase
             ['query'=>['limit'=>1]]
 
         );
-        $this->assertEquals('abc123', $response->getId(), 'It appears the cache was not hit.');
+        $this->assertEquals('xyz789', $response->getId(), 'It appears the cache was not hit.');
 
     }
 
     /** @test */
-    public function create_resource_will_store_item_in_cache()
+    public function create_resource_will_not_store_item_in_cache()
     {
         $mockReturns = [
             [
@@ -278,14 +281,14 @@ class DefaultDataStoreTest extends TestCase
             '/users'
 
         );
-        $this->assertEquals('abc123', $response->getId(), 'It appears the cache was not hit.');
+        $this->assertEquals('xyz789', $response->getId(), 'It appears the cache was not hit.');
 
 
     }
 
 
     /** @test */
-    public function will_delete_item_from_cache_when_deleting_resource()
+    public function will_delete_item_without_interacting_with_cache()
     {
         $mockReturns = [
             [
@@ -325,12 +328,13 @@ class DefaultDataStoreTest extends TestCase
         $user = $user->create();
 
         $cacheManager = $client->getCacheManager();
-        $this->assertTrue(
+        $this->assertFalse(
             $cacheManager->pool()->hasItem(
                 $cacheManager->createCacheKey(
                     $dataStore->getUriFactory()->createUri("https://dev.okta.com/api/v1/users/abc123")
                 )
-            )
+            ),
+            'The cache was used'
         );
 
         $user->delete();
@@ -345,7 +349,7 @@ class DefaultDataStoreTest extends TestCase
     }
 
     /** @test */
-    public function saving_a_resource_will_clear_all_linked_resources()
+    public function saving_a_resource_will_not_clear_linked_resources()
     {
         $mockReturns = [
             [
@@ -401,7 +405,7 @@ class DefaultDataStoreTest extends TestCase
         $user->save();
 
 
-        $this->assertFalse(
+        $this->assertTrue(
             $cacheManager->pool()->hasItem(
                 $cacheManager->createCacheKey(
                     $dataStore->getUriFactory()->createUri('http://example.com/abc123')
@@ -417,7 +421,7 @@ class DefaultDataStoreTest extends TestCase
     }
 
     /** @test */
-    public function calling_execute_request_through_resource_method_will_update_cache()
+    public function calling_execute_request_through_resource_method_will_not_update_cache()
     {
         $mockReturns = [
             [
@@ -479,9 +483,9 @@ class DefaultDataStoreTest extends TestCase
         $user = (new \Okta\Users\User())->get('abc123');
 
         $this->assertEquals(
-            'ACTIVE',
+            null,
             $user->getStatus(),
-            'The cache was not updated during a user activate method.'
+            'The cache was updated during a user activate method.'
         );
     }
 
@@ -538,7 +542,7 @@ class DefaultDataStoreTest extends TestCase
         $user = $user->get('php@okta.com');
 
         $this->assertFalse($cacheManager->pool()->hasItem($key));
-        $this->assertTrue($cacheManager->pool()->hasItem($key2));
+        $this->assertFalse($cacheManager->pool()->hasItem($key2));
     }
 
     
